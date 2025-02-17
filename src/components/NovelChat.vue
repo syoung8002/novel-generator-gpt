@@ -4,7 +4,7 @@
             <v-list>
                 <v-list-group>
                     <template v-slot:activator="{ props }">
-                        <v-list-item v-bind="props" title="이전 소설 내역"></v-list-item>
+                        <v-list-item v-bind="props" title="이전 내역"></v-list-item>
                     </template>
                     <v-list-item v-for="(item, index) in history" 
                         :key="index" 
@@ -26,17 +26,8 @@
                     </v-list-item>
                 </v-list-group>
             </v-list>
-        </v-card>
-        
-        <v-card flat>
-            <v-card-title>
-                <v-switch
-                    v-model="isEdited"
-                    label="기본 정보 입력"
-                    color="primary"
-                ></v-switch>
-            </v-card-title>
-            <v-card-text v-if="isEdited">
+
+            <v-card-text>
                 <v-text-field
                     label="공 이름"
                     v-model="novelInfo.mainCharacterName1"
@@ -45,19 +36,6 @@
                     label="수 이름"
                     v-model="novelInfo.mainCharacterName2"
                 ></v-text-field>
-
-                <v-combobox
-                    v-model="novelInfo.keywords"
-                    :items="novelInfo.keywords"
-                    label="키워드"
-                    chips
-                    hide-selected
-                    multiple
-                >
-                    <template v-slot:chip="{ item }">
-                        <v-chip :key="item.id" :text="item.text" color="primary" closable @click:close="removeKeyword(item)"></v-chip>
-                    </template>
-                </v-combobox>
             </v-card-text>
         </v-card>
 
@@ -80,18 +58,18 @@
                 @click="toggleSelectAll"
             ></v-checkbox>
             <v-btn 
-                variant="flat"
+                variant="text"
                 density="comfortable"
                 :disabled="selectedMessages.length === 0"
                 @click="saveNovel" 
                 prepend-icon="mdi-file-document-outline"
-                class="mr-2 mt-3"
+                class="mt-3"
                 color="success"
             >
-                저장
+                내역 저장
             </v-btn>
             <v-btn 
-                variant="flat"
+                variant="text"
                 density="comfortable"
                 :disabled="selectedMessages.length === 0"
                 @click="downloadNovel" 
@@ -172,12 +150,6 @@ export default {
             novelInfo: {
                 mainCharacterName1: '',
                 mainCharacterName2: '',
-                keywords: [
-                    '연하공',
-                    '다정공',
-                    '연상수',
-                    '능력수',
-                ],
             },
             isSelectedAll: false,
             selectedMessages: [],
@@ -219,7 +191,6 @@ export default {
             this.novelInfo = {
                 mainCharacterName1: '',
                 mainCharacterName2: '',
-                keywords: [],
             };
             this.isSelectedAll = false;
             this.selectedMessages = [];
@@ -260,9 +231,6 @@ export default {
             }
 
             return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
-        },
-        removeKeyword(item) {
-            this.novelInfo.keywords = this.novelInfo.keywords.filter(keyword => keyword !== item.text);
         },
         handleKeydown(event) {
             if (event.key === 'Enter' && !event.ctrlKey) {
@@ -345,13 +313,11 @@ export default {
         downloadNovel() {
             const downloadMessages = this.selectedMessages.filter(message => message.role !== 'user');
             const content = downloadMessages.map(message => message.content).join('\n\n');
-            const blob = new Blob([content], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
+            const base64Content = btoa(unescape(encodeURIComponent(content)));
             const a = document.createElement('a');
-            a.href = url;
+            a.href = `data:text/plain;base64,${base64Content}`;
             a.download = 'novel.txt';
             a.click();
-            URL.revokeObjectURL(url);
         }
     }
 }
