@@ -253,6 +253,7 @@ export default {
                 content: message.content
             }));
             this.novelGenerator.previousMessages = [this.novelGenerator.previousMessages[0], ...messages];
+            this.novelGenerator.setMainCharacterName(this.novelInfo.mainCharacterName1, this.novelInfo.mainCharacterName2);
             await this.novelGenerator.generate();
             
             this.messages.push({

@@ -5,15 +5,12 @@ export default class NovelGenerator extends AIGenerator{
     constructor(client, language){
         super(client, language);
 
-        const mainCharacter1Name = this.client.novelInfo.mainCharacterName1;
-        const mainCharacter2Name = this.client.novelInfo.mainCharacterName2;
-
         this.previousMessages = [{
             role: 'system', 
             content: `이제부터 너는 boys love 소설을 쓰는 챗봇이야. 사용자는 소설의 주인공이 될 인물들의 이름을 입력하고 보고싶은 장면이나 설정을 말할 거야. 너는 그걸 바탕으로 소설을 써주면 돼. 사용자가 말한 내용을 그대로 작성하지 말고 소설로 풀어서 써야 해. 사용자가 말한 내용 중 이해가 안가는 것이 있다면 적극적으로 그 정보를 찾아서 소설을 써야 해. 주인공1은 boys love 에서 공격 역할에 해당하고, 주인공2 는 수비 역할에 해당 하는 사람이야.
 - 사용자가 입력한 정보
-주인공1 이름: ${mainCharacter1Name}
-주인공2 이름: ${mainCharacter2Name}
+주인공1 이름: {{ mainCharacter1Name }}
+주인공2 이름: {{ mainCharacter2Name }}
 - 주의사항
 1. 기본적으로 구어체로 작성하고 소설의 시점에 대한 명시가 없다면 1인칭 주인공 시점 (주인공1의 시점)
 1-1. "나는", "내가" 같은 격조사와 보조사를 자주 사용하지 말 것
@@ -29,6 +26,10 @@ export default class NovelGenerator extends AIGenerator{
 
     createPrompt() {
         return this.client.newMessage
+    }
+
+    setMainCharacterName(mainCharacter1Name, mainCharacter2Name) {
+        this.previousMessages[0].content = this.previousMessages[0].content.replace('{{ mainCharacter1Name }}', mainCharacter1Name).replace('{{ mainCharacter2Name }}', mainCharacter2Name);
     }
 
 }
