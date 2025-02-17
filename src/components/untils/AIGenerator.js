@@ -147,6 +147,7 @@ export default class AIGenerator {
         this.state = 'running';
         let me = this;
         let messages = this.createMessages();
+        this.openaiToken = this.client.openaiToken;
 
         if (this.returnCache(messages)) return;
 

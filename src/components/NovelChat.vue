@@ -1,6 +1,34 @@
 <template>
     <v-container>
         <v-card flat>
+            <v-list>
+                <v-list-group>
+                    <template v-slot:activator="{ props }">
+                        <v-list-item v-bind="props" title="이전 소설 내역"></v-list-item>
+                    </template>
+                    <v-list-item v-for="(item, index) in history" 
+                        :key="index" 
+                        @click="loadHistory(item)"
+                    >
+                        <v-list-item-title class="d-flex justify-space-between align-center">
+                            <div class="d-flex align-center" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">
+                                <v-icon class="mr-2">mdi-file-document-outline</v-icon>
+                                {{ item }}
+                            </div>
+                            <v-btn icon="mdi-delete-outline" 
+                                color="default" 
+                                variant="text" 
+                                density="comfortable" 
+                                @click.stop="deleteHistory(item)"
+                                class="ml-auto"
+                            ></v-btn>
+                        </v-list-item-title>
+                    </v-list-item>
+                </v-list-group>
+            </v-list>
+        </v-card>
+        
+        <v-card flat>
             <v-card-title>
                 <v-switch
                     v-model="isEdited"
@@ -27,19 +55,41 @@
                     multiple
                 >
                     <template v-slot:chip="{ item }">
-                        <v-chip :key="item.id" :text="item.text" color="primary" closable></v-chip>
+                        <v-chip :key="item.id" :text="item.text" color="primary" closable @click:close="removeKeyword(item)"></v-chip>
                     </template>
                 </v-combobox>
             </v-card-text>
         </v-card>
 
-        <div class="d-flex mb-2">
+        <div class="d-flex justify-end mb-2">
+            <v-btn
+                variant="text"
+                density="comfortable"
+                @click="init"
+                prepend-icon="mdi-refresh"
+            >
+                초기화
+            </v-btn>
+        </div>
+        
+        <div class="d-flex">
             <v-checkbox
                 v-model="isSelectedAll"
                 label="전체 선택"
                 class="mr-3"
                 @click="toggleSelectAll"
             ></v-checkbox>
+            <v-btn 
+                variant="flat"
+                density="comfortable"
+                :disabled="selectedMessages.length === 0"
+                @click="saveNovel" 
+                prepend-icon="mdi-file-document-outline"
+                class="mr-2 mt-3"
+                color="success"
+            >
+                저장
+            </v-btn>
             <v-btn 
                 variant="flat"
                 density="comfortable"
@@ -53,7 +103,15 @@
         </div>
 
         <div>
-            <div v-for="(message, index) in messages" :key="index" class="mb-2">
+            <div v-for="(message, index) in messages" :key="index" class="d-flex mb-10">
+                <v-checkbox
+                    v-if="selectedMessages.length > 0"
+                    v-model="selectedMessages"
+                    :value="message"
+                    :input-value="selectedMessages.some(selected => selected.id === message.id)"
+                    @change="toggleMessageSelection(message)"
+                    min-width="36"
+                ></v-checkbox>
                 <v-card v-if="message.role === 'user'"
                     class="ml-auto pa-3"
                     color="info"
@@ -62,13 +120,6 @@
                     <div v-html="formatMessageContent(message.content)" class="message-content"></div>
                 </v-card>
                 <div v-else class="d-flex">
-                    <v-checkbox
-                        v-if="selectedMessages.length > 0"
-                        v-model="selectedMessages"
-                        :value="message"
-                        :input-value="selectedMessages.some(selected => selected.id === message.id)"
-                        @change="toggleMessageSelection(message)"
-                    ></v-checkbox>
                     <v-card
                         class="mr-auto pa-3"
                         color="lightgrey"
@@ -93,7 +144,7 @@
             >
                 <v-textarea
                     v-model="content"
-                    placeholder="내용 입력 (줄바꿈은 ctrl + enter)"
+                    placeholder="내용 입력"
                     rows="1"
                     auto-grow
                     @keydown="handleKeydown"
@@ -130,28 +181,77 @@ export default {
             },
             isSelectedAll: false,
             selectedMessages: [],
+            isViewHistory: false,
+            history: [],
         }
     },
     watch: {
         isSelectedAll(newVal) {
             if (newVal) {
-                this.selectedMessages = this.messages.filter(message => message.role !== 'user');
+                this.selectedMessages = this.messages;
             }
         },
         selectedMessages(newVal) {
-            const allMessages = this.messages.filter(message => message.role !== 'user');
-            if (newVal.length === allMessages.length) {
+            if (newVal.length > 0 && newVal.length === this.messages.length) {
                 this.isSelectedAll = true;
             }
-        }
+        },
     },
     mounted() {
+        this.getHistory();
         this.novelGenerator = new NovelGenerator(this, {
             isStream: true,
             preferredLanguage: 'Korean'
         });
+        this.openaiToken = localStorage.getItem('openAIToken');
+        if (!this.openaiToken) {
+            var apiKey = prompt('OpenAI API Key 입력');
+            if(apiKey != '') {
+                this.openaiToken = apiKey;
+                window.localStorage.setItem('openAIToken', apiKey);
+            }
+        }
     },
     methods: {
+        init() {
+            this.messages = [];
+            this.content = '';
+            this.novelInfo = {
+                mainCharacterName1: '',
+                mainCharacterName2: '',
+                keywords: [],
+            };
+            this.isSelectedAll = false;
+            this.selectedMessages = [];
+            this.novelGenerator = new NovelGenerator(this, {
+                isStream: true,
+                preferredLanguage: 'Korean'
+            });
+        },
+        getHistory() {
+            const history = localStorage.getItem('history');
+            if (history) {
+                this.history = JSON.parse(history);
+            } else {
+                this.history = [];
+            }
+        },
+        loadHistory(item) {
+            let novel = localStorage.getItem(item);
+            if (novel) {
+                novel = JSON.parse(novel);
+                this.messages = novel.messages;
+                this.novelInfo = novel.novelInfo;
+            }
+            this.isSelectedAll = false;
+            this.selectedMessages = [];
+        },
+        deleteHistory(item) {
+            this.history = this.history.filter(history => history !== item);
+            localStorage.setItem('history', JSON.stringify(this.history));
+            localStorage.removeItem(item);
+            this.getHistory();
+        },
         uuid() {
             function s4() {
                 return Math.floor((1 + Math.random()) * 0x10000)
@@ -160,6 +260,9 @@ export default {
             }
 
             return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+        },
+        removeKeyword(item) {
+            this.novelInfo.keywords = this.novelInfo.keywords.filter(keyword => keyword !== item.text);
         },
         handleKeydown(event) {
             if (event.key === 'Enter' && !event.ctrlKey) {
@@ -212,7 +315,7 @@ export default {
         toggleSelectAll() {
             this.isSelectedAll = !this.isSelectedAll;
             if (this.isSelectedAll) {
-                this.selectedMessages = this.messages.filter(message => message.role !== 'user');
+                this.selectedMessages = this.messages;
             } else {
                 this.selectedMessages = [];
             }
@@ -223,8 +326,25 @@ export default {
                 this.isSelectedAll = false;
             }
         },
+        saveNovel() {
+            try {
+                const novelInfo = {
+                    messages: this.selectedMessages,
+                    novelInfo: this.novelInfo
+                };
+                const novelId = `${this.novelInfo.mainCharacterName1}_${this.novelInfo.mainCharacterName2}_${new Date().toISOString()}`;
+                this.history.push(novelId);
+                localStorage.setItem('history', JSON.stringify(this.history));
+                localStorage.setItem(novelId, JSON.stringify(novelInfo));
+
+                alert('저장되었습니다.');
+            } catch (error) {
+                alert('저장에 실패했습니다.');
+            }
+        },
         downloadNovel() {
-            const content = this.selectedMessages.map(message => message.content).join('\n\n');
+            const downloadMessages = this.selectedMessages.filter(message => message.role !== 'user');
+            const content = downloadMessages.map(message => message.content).join('\n\n');
             const blob = new Blob([content], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
