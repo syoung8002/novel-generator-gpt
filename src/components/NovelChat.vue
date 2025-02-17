@@ -66,7 +66,7 @@
                 class="mt-3"
                 color="success"
             >
-                내역 저장
+                대화 저장
             </v-btn>
             <v-btn 
                 variant="text"
@@ -76,7 +76,7 @@
                 prepend-icon="mdi-download"
                 class="mt-3"
             >
-                다운로드
+                txt 다운
             </v-btn>
         </div>
 
@@ -245,7 +245,7 @@ export default {
                 id: this.uuid(),
                 role: 'user',
                 content: this.content,
-                timestamp: new Date().toISOString()
+                timestamp: Date.now()
             });
 
             const messages = this.messages.map(message => ({
@@ -261,7 +261,7 @@ export default {
                 role: 'system',
                 content: '...',
                 isGenerating: true,
-                timestamp: new Date().toISOString()
+                timestamp: Date.now()
             });
             this.content = '';
         },
@@ -301,7 +301,7 @@ export default {
                     messages: this.selectedMessages,
                     novelInfo: this.novelInfo
                 };
-                const novelId = `${this.novelInfo.mainCharacterName1}_${this.novelInfo.mainCharacterName2}_${new Date().toISOString()}`;
+                const novelId = `${this.novelInfo.mainCharacterName1}_${this.novelInfo.mainCharacterName2}_${Date.now()}`;
                 this.history.push(novelId);
                 localStorage.setItem('history', JSON.stringify(this.history));
                 localStorage.setItem(novelId, JSON.stringify(novelInfo));
